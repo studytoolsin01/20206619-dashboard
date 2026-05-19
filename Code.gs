@@ -10,6 +10,14 @@
  * 웹 브라우저에서 웹앱 URL로 접속 시 Index.html을 렌더링하여 반환합니다.
  */
 function doGet(e) {
+  // 1. 외부 API 데이터 요청 대응 (Netlify 등 외부 fetch 통신용 JSON 반환)
+  if (e && e.parameter && e.parameter.action === 'getData') {
+    var data = getDashboardData();
+    return ContentService.createTextOutput(JSON.stringify(data))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 2. 기존 HTML 서비스 응답 (웹앱으로 다이렉트 접속 시)
   var output = HtmlService.createHtmlOutputFromFile('Index');
   
   // 보안 및 iframe 렌더링 설정

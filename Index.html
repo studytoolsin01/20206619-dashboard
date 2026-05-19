@@ -483,6 +483,10 @@
       loadDashboardData();
     });
 
+    // [Netlify 연동 설정] 배포한 Google Apps Script 웹앱 URL을 입력하세요.
+    // 예시: "https://script.google.com/macros/s/AKfycb.../exec"
+    const GAS_WEBAPP_URL = "";
+
     /**
      * Google Apps Script 백엔드 함수를 호출하여 데이터를 요청합니다.
      */
@@ -495,15 +499,37 @@
       // 에러 배너 숨기기
       document.getElementById('error-banner').classList.add('d-none');
 
-      // Google Apps Script API 비동기 호출
+      // 1. Google Apps Script 내부 실행 환경인 경우
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         google.script.run
           .withSuccessHandler(onDataLoaded)
           .withFailureHandler(onError)
           .getDashboardData();
-      } else {
-        // 로컬 브라우저 개발용 목업 데이터 로더 (테스트 목적)
-        console.warn("GAS 실행 환경이 아닙니다. 모의 데이터를 로드합니다.");
+      } 
+      // 2. 외부 환경(Netlify 등)에서 배포된 웹앱 URL을 사용하는 경우
+      else if (GAS_WEBAPP_URL && GAS_WEBAPP_URL.trim() !== "") {
+        console.log("외부 서버 환경에서 fetch API를 사용하여 실시간 데이터를 요청합니다.");
+        const apiUrl = GAS_WEBAPP_URL.trim() + "?action=getData";
+        
+        fetch(apiUrl)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error("네트워크 오류가 발생했습니다. (HTTP " + response.status + ")");
+            }
+            return response.json();
+          })
+          .then(data => {
+            onDataLoaded(data);
+          })
+          .catch(error => {
+            console.error("데이터 로드 중 에러 발생:", error);
+            onError(error);
+          });
+      } 
+      // 3. 실행 환경이 아니며 웹앱 URL도 설정되지 않은 경우 (로컬 개발용 목업 데이터 로더)
+      else {
+        console.warn("GAS 실행 환경이 아니며, GAS_WEBAPP_URL 설정이 비어 있습니다. 모의(Mock) 데이터를 로드합니다.");
+        console.info("실제 데이터 연동을 원하시면 Index.html 상단의 'GAS_WEBAPP_URL' 변수에 배포된 웹앱 주소를 입력하세요.");
         setTimeout(function() {
           onDataLoaded(getMockData());
         }, 1000);
