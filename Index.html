@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 AppSheet 영업·재고 통합 대시보드</title>
+  
+  <!-- Google Fonts - Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- FontAwesome 6 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- Custom Dark Theme Styles -->
+  <style>
+    :root {
+      --bg-color: #0f172a;      /* Slate 900 */
+      --card-bg: #1e293b;       /* Slate 800 */
+      --border-color: #334155;  /* Slate 700 */
+      --text-main: #f8fafc;     /* Slate 50 */
+      --text-muted: #94a3b8;    /* Slate 400 */
+      --accent-blue: #38bdf8;   /* Sky 400 */
+      --accent-indigo: #818cf8; /* Indigo 400 */
+      --accent-green: #22c55e;  /* Green 500 */
+      --accent-orange: #f59e0b; /* Amber 500 */
+      --accent-red: #ef4444;    /* Red 500 */
+    }
+    
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-size: 0.95rem;
+    }
+    
+    /* Navbar styling */
+    .navbar {
+      background-color: #0b0f19 !important;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+    }
+    .navbar-brand {
+      font-weight: 700;
+      color: var(--text-main) !important;
+      letter-spacing: -0.5px;
+    }
+    
+    /* Card styling */
+    .dashboard-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      height: 100%;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    .card-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* KPI values */
+    .kpi-value {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+    .kpi-unit {
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 0.15rem;
+    }
+    .kpi-subtext {
+      font-size: 0.75rem;
+      color: var(--accent-blue);
+      margin-top: 0.25rem;
+      font-weight: 400;
+    }
+    
+    /* Icon wrapper */
+    .icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .bg-blue-transparent { background-color: rgba(56, 189, 248, 0.12); color: var(--accent-blue); }
+    .bg-indigo-transparent { background-color: rgba(129, 204, 248, 0.12); color: var(--accent-indigo); }
+    .bg-green-transparent { background-color: rgba(34, 197, 94, 0.12); color: var(--accent-green); }
+    .bg-orange-transparent { background-color: rgba(245, 158, 11, 0.12); color: var(--accent-orange); }
+    .bg-red-transparent { background-color: rgba(239, 68, 68, 0.12); color: var(--accent-red); }
+    
+    /* Sub KPIs layout */
+    .sub-kpi-row {
+      border-top: 1px solid var(--border-color);
+      margin-top: 1rem;
+      padding-top: 1rem;
+    }
+    
+    /* Charts size */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 250px;
+    }
+    
+    /* Tables styling */
+    .table {
+      color: var(--text-main);
+      margin-bottom: 0;
+      vertical-align: middle;
+    }
+    .table th {
+      border-bottom: 2px solid var(--border-color);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    .table td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+      padding: 0.75rem 0.5rem;
+    }
+    
+    /* Loading overlay */
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-color);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+    }
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      color: var(--accent-blue);
+    }
+    
+    /* Progress bar custom styling */
+    .progress-bar-custom {
+      height: 8px;
+      border-radius: 4px;
+      background-color: rgba(255, 255, 255, 0.05);
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background-image: linear-gradient(90deg, var(--accent-indigo), var(--accent-blue));
+    }
+    
+    /* Refresh button rotation animation */
+    .spin-animation {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Scrollbar customized */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 로딩 스피너 오버레이 -->
+  <div id="loading-overlay">
+    <div class="spinner-border mb-3" role="status"></div>
+    <div class="h5 text-white">대시보드 데이터를 조회하는 중입니다...</div>
+    <div class="small text-muted">스프레드시트에서 실시간 데이터를 가공하고 있습니다.</div>
+  </div>
+
+  <!-- 에러 배너 알림 -->
+  <div id="error-banner" class="alert alert-danger alert-dismissible fade show m-3 d-none" role="alert">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+    <span id="error-message">데이터 로드에 실패했습니다.</span>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <!-- 네비게이션 헤더 -->
+  <nav class="navbar navbar-dark sticky-top">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">
+        <i class="fa-solid fa-chart-pie me-2 text-info"></i>
+        AppSheet 영업·재고 통합 대시보드
+      </span>
+      <div class="d-flex align-items-center text-white">
+        <span class="small text-muted me-3 d-none d-sm-inline" id="last-updated-text">최종 업데이트: -</span>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-refresh" onclick="refreshDashboard()" title="데이터 새로고침">
+          <i class="fa-solid fa-rotate" id="refresh-icon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 메인 대시보드 그리드 영역 -->
+  <div class="container-fluid p-4">
+    
+    <!-- 1행: 상단 KPI 카드 섹션 (4개) -->
+    <div class="row g-3 mb-4">
+      
+      <!-- KPI Card 1: 총 매출액 -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="dashboard-card d-flex align-items-center justify-content-between">
+          <div>
+            <div class="card-title">총 매출액</div>
+            <div class="kpi-value" id="kpi-total-sales">-<span class="kpi-unit">원</span></div>
+            <div class="kpi-subtext" id="kpi-total-sales-sub">약 -만 원</div>
+          </div>
+          <div class="icon-wrapper bg-blue-transparent">
+            <i class="fa-solid fa-won-sign"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KPI Card 2: 총 판매 건수 -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="dashboard-card d-flex align-items-center justify-content-between">
+          <div>
+            <div class="card-title">총 판매 건수</div>
+            <div class="kpi-value" id="kpi-sales-count">-<span class="kpi-unit">건</span></div>
+            <div class="kpi-subtext text-muted" id="kpi-sales-count-sub">총 200건의 주문 데이터</div>
+          </div>
+          <div class="icon-wrapper bg-indigo-transparent">
+            <i class="fa-solid fa-shopping-cart"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KPI Card 3: 현재 총 재고 -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="dashboard-card d-flex align-items-center justify-content-between">
+          <div>
+            <div class="card-title">현재 총 재고</div>
+            <div class="kpi-value" id="kpi-total-inventory">-<span class="kpi-unit">개</span></div>
+            <div class="kpi-subtext" id="kpi-total-inventory-sub" style="color: var(--accent-orange);">안전재고 유지 현황</div>
+          </div>
+          <div class="icon-wrapper bg-green-transparent">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KPI Card 4: 예상 총 이익 -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="dashboard-card d-flex align-items-center justify-content-between">
+          <div>
+            <div class="card-title">예상 총 이익</div>
+            <div class="kpi-value" id="kpi-expected-profit">-<span class="kpi-unit">원</span></div>
+            <div class="kpi-subtext" id="kpi-expected-profit-sub">약 -만 원</div>
+          </div>
+          <div class="icon-wrapper bg-orange-transparent">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- 2행: 보조 KPI 카드 섹션 (3개) -->
+    <div class="row g-3 mb-4">
+      
+      <!-- Sub KPI A: 평균 주문 금액 -->
+      <div class="col-12 col-md-4">
+        <div class="dashboard-card p-3 d-flex align-items-center">
+          <div class="icon-wrapper bg-blue-transparent me-3">
+            <i class="fa-solid fa-money-bill-wave"></i>
+          </div>
+          <div>
+            <div class="card-title mb-1">평균 주문 금액</div>
+            <div class="h5 mb-0" id="kpi-avg-order-amount">- 원</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub KPI B: 평균 마진율 -->
+      <div class="col-12 col-md-4">
+        <div class="dashboard-card p-3 d-flex align-items-center">
+          <div class="icon-wrapper bg-indigo-transparent me-3">
+            <i class="fa-solid fa-percent"></i>
+          </div>
+          <div>
+            <div class="card-title mb-1">평균 마진율</div>
+            <div class="h5 mb-0" id="kpi-avg-margin">- %</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub KPI C: 불량 입고 건수 -->
+      <div class="col-12 col-md-4">
+        <div class="dashboard-card p-3 d-flex align-items-center">
+          <div class="icon-wrapper bg-red-transparent me-3" id="icon-bad-inbound">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <div class="card-title mb-1">불량 입고 건수</div>
+            <div class="h5 mb-0 text-danger" id="kpi-defects-count">- 건</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3행: 월별 매출 트렌드 차트 (1행 전체 너비) -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="dashboard-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="h6 mb-0"><i class="fa-solid fa-chart-line me-2 text-info"></i>월별 매출 트렌드</div>
+            <span class="badge bg-secondary">최근 3개월</span>
+          </div>
+          <div class="chart-container" style="height: 280px;">
+            <canvas id="monthlyTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4행: 카테고리별 매출 차트 & 재고 상태 도넛 차트 (2분할) -->
+    <div class="row g-4 mb-4">
+      
+      <!-- 카테고리별 매출 (수평 바 차트) -->
+      <div class="col-12 col-xl-8">
+        <div class="dashboard-card">
+          <div class="h6 mb-3"><i class="fa-solid fa-chart-bar me-2 text-info"></i>카테고리별 매출 현황</div>
+          <div class="chart-container" style="height: 250px;">
+            <canvas id="categorySalesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 재고상태 분포 (도넛 차트) -->
+      <div class="col-12 col-xl-4">
+        <div class="dashboard-card">
+          <div class="h6 mb-3"><i class="fa-solid fa-circle-pie me-2 text-info"></i>재고상태 분포</div>
+          <div class="position-relative" style="height: 220px;">
+            <canvas id="inventoryStatusChart"></canvas>
+            <!-- 도넛 정중앙 텍스트 배치 -->
+            <div class="position-absolute top-50 start-50 translate-middle text-center" style="transform: translate(-50%, -50%); pointer-events: none;">
+              <div class="h4 mb-0 fw-bold text-white" id="donut-center-value">0</div>
+              <div class="small text-muted">총 품목 수</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- 5행: 판매채널별 매출 차트 & 제품별 현재 vs 안전재고 비교 차트 (3:9 분할) -->
+    <div class="row g-4 mb-4">
+      
+      <!-- 판매채널별 매출 (파이 차트) -->
+      <div class="col-12 col-lg-4">
+        <div class="dashboard-card">
+          <div class="h6 mb-3"><i class="fa-solid fa-chart-pie me-2 text-info"></i>판매채널별 매출 점유율</div>
+          <div class="chart-container" style="height: 250px;">
+            <canvas id="channelSalesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 제품별 현재재고 vs 안전재고 (그룹 바 차트) -->
+      <div class="col-12 col-lg-8">
+        <div class="dashboard-card">
+          <div class="h6 mb-3"><i class="fa-solid fa-boxes-packing me-2 text-info"></i>제품별 현재재고 vs 안전재고 비교</div>
+          <div class="chart-container" style="height: 250px;">
+            <canvas id="productStockChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- 6행: 재고 경고 테이블 & 지역별 매출 섹션 (8:4 분할) -->
+    <div class="row g-4">
+      
+      <!-- 재고 경고 테이블 -->
+      <div class="col-12 col-xl-8">
+        <div class="dashboard-card">
+          <div class="h6 mb-3 text-warning">
+            <i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>
+            재고 주의 품목 (현재재고 &lt; 안전재고 &times; 1.5)
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>제품코드</th>
+                  <th>제품명</th>
+                  <th>카테고리</th>
+                  <th class="text-end">현재재고</th>
+                  <th class="text-end">안전재고</th>
+                  <th class="text-center">재고상태</th>
+                  <th class="text-end">재고여유율</th>
+                </tr>
+              </thead>
+              <tbody id="warning-table-body">
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">데이터를 로드하는 중입니다...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 지역별 매출 (Leaderboard) -->
+      <div class="col-12 col-xl-4">
+        <div class="dashboard-card">
+          <div class="h6 mb-3"><i class="fa-solid fa-map-location-dot me-2 text-info"></i>지역별 매출 TOP 5</div>
+          <div id="region-list" class="d-flex flex-column gap-3 justify-content-center py-2">
+            <div class="text-center text-muted py-4">데이터 로드 중...</div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+  </div>
+
+  <!-- Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Chart.js 4.4 CSS/JS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // 전역 차트 객체 참조 보관용 변수 (새로고침 시 기존 차트 폐기 필요)
+    let charts = {};
+    
+    // 차트 다크 모드 스타일 공통 세팅
+    Chart.defaults.color = '#94a3b8';         // 텍스트 회색
+    Chart.defaults.borderColor = '#334155';     // 테두리 회색 (Slate 700)
+    Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
+
+    // 페이지 로드 즉시 실행
+    document.addEventListener("DOMContentLoaded", function() {
+      loadDashboardData();
+    });
+
+    /**
+     * Google Apps Script 백엔드 함수를 호출하여 데이터를 요청합니다.
+     */
+    function loadDashboardData() {
+      // 로딩 스피너 보이기
+      document.getElementById('loading-overlay').style.opacity = '1';
+      document.getElementById('loading-overlay').style.visibility = 'visible';
+      document.getElementById('refresh-icon').classList.add('spin-animation');
+      
+      // 에러 배너 숨기기
+      document.getElementById('error-banner').classList.add('d-none');
+
+      // Google Apps Script API 비동기 호출
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onDataLoaded)
+          .withFailureHandler(onError)
+          .getDashboardData();
+      } else {
+        // 로컬 브라우저 개발용 목업 데이터 로더 (테스트 목적)
+        console.warn("GAS 실행 환경이 아닙니다. 모의 데이터를 로드합니다.");
+        setTimeout(function() {
+          onDataLoaded(getMockData());
+        }, 1000);
+      }
+    }
+
+    /**
+     * 데이터 로드 완료 콜백 함수
+     */
+    function onDataLoaded(response) {
+      // 로딩 스피너 숨기기
+      document.getElementById('loading-overlay').style.opacity = '0';
+      setTimeout(function() {
+        document.getElementById('loading-overlay').style.visibility = 'hidden';
+      }, 400);
+      document.getElementById('refresh-icon').classList.remove('spin-animation');
+
+      if (!response.success) {
+        onError(new Error(response.error || "알 수 없는 에러가 발생했습니다."));
+        return;
+      }
+
+      // 최종 업데이트 일자 갱신
+      document.getElementById('last-updated-text').textContent = '최종 업데이트: ' + response.updatedAt;
+
+      // 1. KPI 영역 데이터 바인딩
+      bindKpiData(response.kpis);
+
+      // 2. 차트 렌더링
+      renderMonthlyTrendChart(response.sales.monthly);
+      renderCategorySalesChart(response.sales.category);
+      renderInventoryStatusChart(response.inventory.statusCounts);
+      renderChannelSalesChart(response.sales.channel);
+      renderProductStockChart(response.inventory.chartData);
+
+      // 3. 재고 주의 테이블 및 지역 순위 렌더링
+      renderWarningTable(response.inventory.warnings);
+      renderRegionSales(response.sales.region);
+    }
+
+    /**
+     * 에러 핸들러
+     */
+    function onError(error) {
+      // 로딩 숨기기
+      document.getElementById('loading-overlay').style.opacity = '0';
+      document.getElementById('loading-overlay').style.visibility = 'hidden';
+      document.getElementById('refresh-icon').classList.remove('spin-animation');
+
+      // 에러 메시지 표출
+      document.getElementById('error-message').textContent = error.message || error;
+      document.getElementById('error-banner').classList.remove('d-none');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * 새로고침 버튼 핸들러
+     */
+    function refreshDashboard() {
+      loadDashboardData();
+    }
+
+    /**
+     * 한국식 금액/단위 포맷 함수 (예: 122661450 -> "약 1억 2,266만 원")
+     */
+    function formatKoreanWon(value) {
+      if (!value || isNaN(value)) return "0원";
+      
+      if (value >= 100000000) {
+        var eok = Math.floor(value / 100000000);
+        var man = Math.round((value % 100000000) / 10000);
+        if (man > 0) {
+          return "약 " + eok + "억 " + man.toLocaleString('ko-KR') + "만 원";
+        }
+        return "약 " + eok + "억 원";
+      } else if (value >= 10000) {
+        var man = Math.round(value / 10000);
+        return "약 " + man.toLocaleString('ko-KR') + "만 원";
+      }
+      return value.toLocaleString('ko-KR') + "원";
+    }
+
+    /**
+     * KPI 데이터를 카드의 DOM 요소에 바인딩
+     */
+    function bindKpiData(kpis) {
+      // KPI 1: 총 매출액
+      if (kpis['총 매출액']) {
+        var val = kpis['총 매출액'].value;
+        document.getElementById('kpi-total-sales').innerHTML = val.toLocaleString('ko-KR') + '<span class="kpi-unit">원</span>';
+        document.getElementById('kpi-total-sales-sub').textContent = formatKoreanWon(val);
+      }
+      
+      // KPI 2: 총 판매 건수
+      if (kpis['총 판매 건수']) {
+        var val = kpis['총 판매 건수'].value;
+        document.getElementById('kpi-sales-count').innerHTML = val.toLocaleString('ko-KR') + '<span class="kpi-unit">건</span>';
+        if (kpis['총 판매 수량']) {
+          var qty = kpis['총 판매 수량'].value;
+          document.getElementById('kpi-sales-count-sub').textContent = '총 판매 수량: ' + qty.toLocaleString('ko-KR') + '개';
+        }
+      }
+      
+      // KPI 3: 현재 총 재고
+      if (kpis['현재 총 재고']) {
+        var val = kpis['현재 총 재고'].value;
+        document.getElementById('kpi-total-inventory').innerHTML = val.toLocaleString('ko-KR') + '<span class="kpi-unit">개</span>';
+        var warnItems = kpis['주의 재고 품목 수'] ? kpis['주의 재고 품목 수'].value : 0;
+        var dangerItems = kpis['안전재고 부족 품목 수'] ? kpis['안전재고 부족 품목 수'].value : 0;
+        document.getElementById('kpi-total-inventory-sub').textContent = '주의: ' + warnItems + '개 / 부족: ' + dangerItems + '개';
+        
+        // 주의 및 부족이 있을 경우 주황색/빨간색 강조
+        if (dangerItems > 0) {
+          document.getElementById('kpi-total-inventory-sub').style.color = 'var(--accent-red)';
+        } else if (warnItems > 0) {
+          document.getElementById('kpi-total-inventory-sub').style.color = 'var(--accent-orange)';
+        } else {
+          document.getElementById('kpi-total-inventory-sub').style.color = 'var(--accent-green)';
+        }
+      }
+      
+      // KPI 4: 예상 총 이익
+      if (kpis['예상 총 이익']) {
+        var val = kpis['예상 총 이익'].value;
+        document.getElementById('kpi-expected-profit').innerHTML = val.toLocaleString('ko-KR') + '<span class="kpi-unit">원</span>';
+        document.getElementById('kpi-expected-profit-sub').textContent = formatKoreanWon(val);
+      }
+
+      // 보조 KPI A: 평균 주문 금액
+      if (kpis['평균 주문 금액']) {
+        var val = kpis['평균 주문 금액'].value;
+        document.getElementById('kpi-avg-order-amount').textContent = val.toLocaleString('ko-KR') + '원';
+      }
+
+      // 보조 KPI B: 평균 마진율
+      if (kpis['평균 마진율']) {
+        var val = kpis['평균 마진율'].value;
+        // 소수형(0.353)으로 리턴되었을 경우 100을 곱함
+        if (val > 0 && val < 1) {
+          val = val * 100;
+        }
+        document.getElementById('kpi-avg-margin').textContent = val.toFixed(1) + '%';
+      }
+
+      // 보조 KPI C: 불량 입고 건수
+      if (kpis['불량 입고 건수']) {
+        var val = kpis['불량 입고 건수'].value;
+        document.getElementById('kpi-defects-count').textContent = val.toLocaleString('ko-KR') + '건';
+        var badgeWrapper = document.getElementById('icon-bad-inbound');
+        if (val > 0) {
+          badgeWrapper.className = 'icon-wrapper bg-red-transparent me-3';
+          document.getElementById('kpi-defects-count').className = 'h5 mb-0 text-danger';
+        } else {
+          badgeWrapper.className = 'icon-wrapper bg-green-transparent me-3';
+          document.getElementById('kpi-defects-count').className = 'h5 mb-0 text-success';
+        }
+      }
+    }
+
+    /**
+     * 차트 1: 월별 매출 트렌드 (라인 차트)
+     */
+    function renderMonthlyTrendChart(data) {
+      if (charts.monthly) charts.monthly.destroy();
+
+      // 정렬된 연월 리스트 생성
+      var labels = Object.keys(data).sort();
+      var values = labels.map(key => data[key]);
+
+      var ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+      
+      // 그라디언트 채우기 색상 정의
+      var gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, 'rgba(56, 189, 248, 0.4)');
+      gradient.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+      charts.monthly = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '매출액 (원)',
+            data: values,
+            borderColor: '#38bdf8',
+            borderWidth: 3,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#38bdf8',
+            pointBorderColor: '#0f172a',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: {
+                callback: function(value) {
+                  return (value / 10000).toLocaleString('ko-KR') + '만';
+                }
+              }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '매출액: ' + context.raw.toLocaleString('ko-KR') + '원';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * 차트 2: 카테고리별 매출 (수평 바 차트)
+     */
+    function renderCategorySalesChart(data) {
+      if (charts.category) charts.category.destroy();
+
+      // 매출액 기준 내림차순 정렬
+      var sorted = Object.keys(data).map(key => {
+        return { name: key, val: data[key] };
+      }).sort((a, b) => b.val - a.val);
+
+      var labels = sorted.map(item => item.name);
+      var values = sorted.map(item => item.val);
+
+      var ctx = document.getElementById('categorySalesChart').getContext('2d');
+      
+      // 그라디언트 바 생성
+      var gradient = ctx.createLinearGradient(0, 0, 500, 0);
+      gradient.addColorStop(0, '#818cf8');
+      gradient.addColorStop(1, '#38bdf8');
+
+      charts.category = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: gradient,
+            borderRadius: 6,
+            borderWidth: 0,
+            barThickness: 20
+          }]
+        },
+        options: {
+          indexAxis: 'y', // 수평 바 차트로 설정
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: {
+                callback: function(value) {
+                  return (value / 10000).toLocaleString('ko-KR') + '만';
+                }
+              }
+            },
+            y: {
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '매출액: ' + context.raw.toLocaleString('ko-KR') + '원';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * 차트 3: 재고상태 분포 (도넛 차트)
+     */
+    function renderInventoryStatusChart(counts) {
+      if (charts.inventoryStatus) charts.inventoryStatus.destroy();
+
+      var labels = ['정상', '주의', '부족'];
+      var values = [
+        counts['정상'] || 0,
+        counts['주의'] || 0,
+        counts['부족'] || 0
+      ];
+
+      // 총 품목 수 계산 및 도넛 중앙 바인딩
+      var totalItems = values.reduce((a, b) => a + b, 0);
+      document.getElementById('donut-center-value').textContent = totalItems + '개';
+
+      var ctx = document.getElementById('inventoryStatusChart').getContext('2d');
+      charts.inventoryStatus = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              '#22c55e', // 정상 (Green)
+              '#f59e0b', // 주의 (Orange)
+              '#ef4444'  // 부족 (Red)
+            ],
+            borderWidth: 2,
+            borderColor: '#1e293b', // 카드 배경색과 일치시켜 경계 구분
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          cutout: '75%', // 도넛 도께 얇게 설정해 중앙 텍스트 공간 확보
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                usePointStyle: true,
+                padding: 15
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * 차트 4: 판매채널별 매출 (파이 차트)
+     */
+    function renderChannelSalesChart(data) {
+      if (charts.channel) charts.channel.destroy();
+
+      var labels = Object.keys(data);
+      var values = labels.map(key => data[key]);
+
+      var ctx = document.getElementById('channelSalesChart').getContext('2d');
+      charts.channel = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: [
+              '#38bdf8', // 온라인몰
+              '#818cf8', // 오프라인 매장
+              '#34d399', // 마켓플레이스
+              '#f472b6'  // B2B 직거래
+            ],
+            borderWidth: 2,
+            borderColor: '#1e293b'
+          }]
+        },
+        options: {
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                usePointStyle: true,
+                padding: 12,
+                font: { size: 10 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  var value = context.raw;
+                  var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  var percentage = ((value / total) * 100).toFixed(1);
+                  return context.label + ': ' + value.toLocaleString('ko-KR') + '원 (' + percentage + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * 차트 5: 제품별 현재 vs 안전재고 비교 (그룹 바 차트)
+     */
+    function renderProductStockChart(stockList) {
+      if (charts.productStock) charts.productStock.destroy();
+
+      var labels = stockList.map(item => item.name);
+      var currentStock = stockList.map(item => item.current);
+      var safetyStock = stockList.map(item => item.safety);
+
+      var ctx = document.getElementById('productStockChart').getContext('2d');
+      charts.productStock = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '현재재고',
+              data: currentStock,
+              backgroundColor: '#38bdf8',
+              borderRadius: 4,
+              barThickness: 12
+            },
+            {
+              label: '안전재고',
+              data: safetyStock,
+              backgroundColor: 'rgba(239, 68, 68, 0.4)',
+              borderColor: '#ef4444',
+              borderWidth: 1,
+              borderDash: [3, 3], // 점선 느낌 처리
+              borderRadius: 4,
+              barThickness: 12
+            }
+          ]
+        },
+        options: {
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { size: 9 },
+                maxRotation: 45,
+                minRotation: 45
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { boxWidth: 12 }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * 재고 경고 목록 테이블 렌더링
+     */
+    function renderWarningTable(warnings) {
+      var tbody = document.getElementById('warning-table-body');
+      tbody.innerHTML = '';
+
+      if (warnings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-success"><i class="fa-solid fa-circle-check me-2"></i>현재 주의 재고가 필요한 품목이 없습니다.</td></tr>';
+        return;
+      }
+
+      warnings.forEach(function(item) {
+        var tr = document.createElement('tr');
+        
+        // 상태별 배지 색상 매핑
+        var badgeColor = 'bg-success';
+        if (item.status === '주의') badgeColor = 'bg-warning text-dark';
+        else if (item.status === '부족') badgeColor = 'bg-danger';
+
+        // 마진 여유율이 음수(안전재고 미달)일 때 빨간 글씨 처리
+        var marginClass = parseFloat(item.margin) < 0 ? 'text-danger fw-bold' : 'text-warning';
+
+        tr.innerHTML = `
+          <td><code>${item.code}</code></td>
+          <td class="fw-bold">${item.name}</td>
+          <td><span class="badge bg-secondary">${item.category}</span></td>
+          <td class="text-end fw-bold">${item.current.toLocaleString('ko-KR')}</td>
+          <td class="text-end text-muted">${item.safety.toLocaleString('ko-KR')}</td>
+          <td class="text-center"><span class="badge ${badgeColor}">${item.status}</span></td>
+          <td class="text-end ${marginClass}">${item.margin > 0 ? '+' + item.margin : item.margin}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * 지역별 매출 상위 TOP 5 프로그레스 바 목록 렌더링
+     */
+    function renderRegionSales(regions) {
+      var container = document.getElementById('region-list');
+      container.innerHTML = '';
+
+      if (regions.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">지역 데이터 없음</div>';
+        return;
+      }
+
+      // 1위 매출액을 기준으로 비율 %를 환산하여 프로그레스 바 너비 설정
+      var maxVal = regions[0].value || 1;
+      
+      regions.forEach(function(region, idx) {
+        var percentage = ((region.value / maxVal) * 100).toFixed(0);
+        
+        var regionDiv = document.createElement('div');
+        regionDiv.innerHTML = `
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="badge bg-dark me-2 text-info">${idx + 1}</span>
+              <span class="fw-bold text-white">${region.name}</span>
+            </div>
+            <div class="text-end">
+              <span class="small fw-semibold text-light">${region.value.toLocaleString('ko-KR')}원</span>
+            </div>
+          </div>
+          <div class="progress-bar-custom">
+            <div class="progress-bar-fill" style="width: ${percentage}%"></div>
+          </div>
+        `;
+        container.appendChild(regionDiv);
+      });
+    }
+
+    /**
+     * 개발 테스트 및 fallback용 목업(Mock) 데이터 생성기
+     */
+    function getMockData() {
+      return {
+        success: true,
+        updatedAt: "2026-05-19 14:10:00",
+        kpis: {
+          '총 매출액': { value: 122661450, unit: '원' },
+          '총 판매 건수': { value: 200, unit: '건' },
+          '총 판매 수량': { value: 449, unit: '개' },
+          '현재 총 재고': { value: 4979, unit: '개' },
+          '예상 총 이익': { value: 39096000, unit: '원' },
+          '평균 주문 금액': { value: 613307, unit: '원' },
+          '평균 마진율': { value: 35.3, unit: '%' },
+          '불량 입고 건수': { value: 7, unit: '건' },
+          '주의 재고 품목 수': { value: 1, unit: '개' },
+          '안전재고 부족 품목 수': { value: 0, unit: '개' }
+        },
+        sales: {
+          monthly: {
+            '2026-02': 21000000,
+            '2026-03': 39000000,
+            '2026-04': 47000000,
+            '2026-05': 20000000
+          },
+          category: {
+            '전자제품': 66048050,
+            '음향기기': 28791050,
+            '주변기기': 11607800,
+            '웨어러블': 9475200,
+            '저장장치': 6739350
+          },
+          channel: {
+            '온라인몰': 45000000,
+            '오프라인 매장': 35000000,
+            '마켓플레이스': 25000000,
+            'B2B 직거래': 17661450
+          },
+          region: [
+            { name: '서울', value: 45000000 },
+            { name: '경기', value: 35000000 },
+            { name: '부산', value: 20000000 },
+            { name: '인천', value: 15000000 },
+            { name: '대구', value: 7661450 }
+          ]
+        },
+        inventory: {
+          statusCounts: { '정상': 9, '주의': 1, '부족': 0 },
+          warnings: [
+            { code: 'P002', name: '무선 마우스', category: '주변기기', current: 230, safety: 200, status: '주의', margin: '15.0' }
+          ],
+          chartData: [
+            { name: '노트북 Pro 15', current: 130, safety: 50 },
+            { name: '무선 마우스', current: 230, safety: 200 },
+            { name: '기계식 키보드', current: 484, safety: 100 },
+            { name: '27인치 모니터', current: 432, safety: 80 },
+            { name: 'USB-C 허브', current: 992, safety: 150 },
+            { name: '노이즈캔슬링 헤드폰', current: 708, safety: 120 },
+            { name: '웹캠 4K', current: 518, safety: 100 },
+            { name: '외장 SSD 1TB', current: 615, safety: 130 },
+            { name: '스마트워치', current: 638, safety: 90 },
+            { name: '블루투스 스피커', current: 232, safety: 140 }
+          ]
+        }
+      };
+    }
+  </script>
+</body>
+</html>
